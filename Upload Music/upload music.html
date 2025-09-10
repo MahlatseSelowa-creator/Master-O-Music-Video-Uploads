@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Upload Music</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+html, body {height:100%; margin:0; padding:0;}
+body {
+    display:flex; justify-content:center; align-items:center;
+    font-family: Arial, sans-serif;
+    min-height:100vh;
+    background: linear-gradient(135deg, #ff6e7f, #bfe9ff, #c9ffbf, #f9f7d9);
+    background-size: 400% 400%;
+    animation: gradientBG 10s ease-in-out infinite;
+}
+@keyframes gradientBG {
+    0% {background-position:0% 50%;}
+    50% {background-position:100% 50%;}
+    100% {background-position:0% 50%;}
+}
+.upload-container {
+    background: rgba(255,255,255,0.85);
+    padding: 2rem 2.5rem;
+    border-radius:16px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.15);
+    text-align:center;
+    max-width:400px;
+    width:100%;
+}
+.upload-container h2 {margin-bottom:1.5rem; color:#333;}
+.upload-container label {display:block; margin:1rem 0 0.5rem; font-weight:bold; color:#444;}
+.upload-container input[type="file"] {margin-bottom:1.5rem; width:100%;}
+.upload-container button {
+    background: linear-gradient(90deg, #ff6e7f, #bfe9ff);
+    border:none; color:#fff; padding:0.7rem 2rem; border-radius:8px;
+    font-size:1rem; cursor:pointer; transition:0.3s;
+}
+.upload-container button:hover {
+    background: linear-gradient(90deg, #bfe9ff, #ff6e7f);
+}
+.progress-bar-container {width:100%; background:#eee; border-radius:10px; overflow:hidden; margin-top:1rem; display:none;}
+.progress-bar {height:15px; width:0%; background: linear-gradient(90deg, #ff6e7f, #bfe9ff); transition:width 0.2s ease;}
+.progress-text {margin-top:0.5rem; font-size:0.9rem; color:#444;}
+.link-box {margin-top:1rem; padding:0.5rem; background:#f1f1f1; border-radius:6px; word-break:break-word; display:none;}
+</style>
+</head>
+<body>
+
+<div class="upload-container">
+    <h2>Upload Music</h2>
+    <form id="uploadForm">
+        <label for="music">Select Music File:</label>
+        <input type="file" id="music" name="music" accept="audio/*" required>
+        <button type="submit">Upload</button>
+    </form>
+    <div class="progress-bar-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText"></div>
+    <div class="link-box" id="linkBox"></div>
+</div>
+
+<script>
+const form = document.getElementById('uploadForm');
+const progressBar = document.getElementById('progressBar');
+const progressContainer = document.getElementById('progressContainer');
+const progressText = document.getElementById('progressText');
+const linkBox = document.getElementById('linkBox');
+
+form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const fileInput = document.getElementById('music');
+    const musicFile = fileInput.files[0];
+
+    if (!musicFile) {
+        alert('Please select a file to upload.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', musicFile);
+
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Starting upload...';
+    linkBox.style.display = 'none';
+    linkBox.innerHTML = '';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://file.io/?expires=1w', true);
+
+    xhr.upload.addEventListener('progress', function(e){
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+            progressText.textContent = percent + '% uploaded';
+        }
+    });
+
+    xhr.onload = function(){
+        if(xhr.status >= 200 && xhr.status < 300){
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if(response.success){
+                    progressText.textContent = 'Upload complete!';
+                    linkBox.style.display = 'block';
+                    linkBox.innerHTML = `<strong>Download Link:</strong><br>
+                                         <a href="${response.link}" target="_blank">${response.link}</a>`;
+                } else {
+                    progressText.textContent = 'Upload failed: ' + (response.message || 'Unknown error');
+                }
+            } catch(err) {
+                progressText.textContent = 'Upload failed: Invalid server response';
+            }
+        } else {
+            progressText.textContent = 'Upload failed with status ' + xhr.status;
+        }
+    };
+
+    xhr.onerror = function(){
+        progressText.textContent = 'An error occurred during upload. Please try again.';
+    };
+
+    xhr.send(formData);
+});
+</script>
+
+</body>
+</html>

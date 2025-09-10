@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Upload Video</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+html, body {height:100%; margin:0; padding:0;}
+body {
+  display:flex; justify-content:center; align-items:center;
+  font-family: Arial, sans-serif;
+  min-height:100vh;
+  background: linear-gradient(135deg, #ff6e7f, #bfe9ff, #c9ffbf, #f9f7d9);
+  background-size: 400% 400%;
+  animation: gradientBG 10s ease-in-out infinite;
+  padding: 1rem;
+}
+@keyframes gradientBG {
+  0% {background-position:0% 50%;}
+  50% {background-position:100% 50%;}
+  100% {background-position:0% 50%;}
+}
+.upload-container {
+  background: rgba(255,255,255,0.92);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  text-align:center;
+  max-width:520px;
+  width:100%;
+}
+.upload-container h2 {margin-bottom:1rem; color:#333;}
+.upload-container label {display:block; margin:0.5rem 0; font-weight:700; color:#444;}
+.upload-container input[type="file"] {width:100%; margin-bottom:0.8rem;}
+.upload-container button {
+  background: linear-gradient(90deg,#ff6e7f,#bfe9ff);
+  border:none; color:#fff; padding:0.7rem 1.6rem; border-radius:8px;
+  font-size:1rem; cursor:pointer; transition: transform .12s ease;
+}
+.upload-container button:active {transform: translateY(1px);}
+.progress-bar-container {width:100%; background:#eee; border-radius:10px; overflow:hidden; margin-top:1rem; display:none;}
+.progress-bar {height:14px; width:0%; background: linear-gradient(90deg,#ff6e7f,#bfe9ff); transition:width .18s ease;}
+.progress-text {margin-top:.5rem; font-size:.95rem; color:#444; min-height:1.1em;}
+.link-box {margin-top:1rem; padding:.6rem; background:#f7f7f7; border-radius:6px; word-break:break-word; display:none;}
+.preview {margin-top:1rem; border-radius:8px; overflow:hidden; display:none;}
+.preview video {max-width:100%; height:auto; display:block;}
+.small-note {font-size:.85rem; color:#666; margin-top:.5rem;}
+</style>
+</head>
+<body>
+  <div class="upload-container">
+    <h2>Upload Video</h2>
+    <form id="uploadForm">
+      <label for="video">Select Video File</label>
+      <input type="file" id="video" name="video" accept="video/*" required>
+      <div class="small-note">Supported: mp4, webm, mov, etc. Files are uploaded to File.io and expire after one week.</div>
+      <button type="submit">Upload</button>
+    </form>
+
+    <div class="preview" id="previewBox">
+      <label>Preview</label>
+      <video id="previewVideo" controls></video>
+    </div>
+
+    <div class="progress-bar-container" id="progressContainer">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText"></div>
+    <div class="link-box" id="linkBox"></div>
+  </div>
+
+<script>
+const form = document.getElementById('uploadForm');
+const fileInput = document.getElementById('video');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const linkBox = document.getElementById('linkBox');
+const previewBox = document.getElementById('previewBox');
+const previewVideo = document.getElementById('previewVideo');
+
+// show preview when user picks a file
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) {
+    previewBox.style.display = 'none';
+    previewVideo.src = '';
+    return;
+  }
+
+  // small client-side size check to help avoid huge uploads (optional)
+  const maxBytes = 500 * 1024 * 1024; // 500 MB limit in UI (not enforced server-side)
+  if (file.size > maxBytes) {
+    alert('Selected file is larger than 500 MB. Consider using a smaller file or another host for very large videos.');
+  }
+
+  // create object URL for preview
+  try {
+    const url = URL.createObjectURL(file);
+    previewVideo.src = url;
+    previewBox.style.display = 'block';
+  } catch (err) {
+    previewBox.style.display = 'none';
+    previewVideo.src = '';
+  }
+});
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const file = fileInput.files[0];
+  if (!file) {
+    alert('Please select a video file before uploading.');
+    return;
+  }
+
+  // prepare UI
+  progressContainer.style.display = 'block';
+  progressBar.style.width = '0%';
+  progressText.textContent = 'Preparing upload...';
+  linkBox.style.display = 'none';
+  linkBox.innerHTML = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const xhr = new XMLHttpRequest();
+
+  // File.io endpoint with 1 week expiry
+  xhr.open('POST', 'https://file.io/?expires=1w', true);
+
+  xhr.upload.addEventListener('progress', (evt) => {
+    if (evt.lengthComputable) {
+      const percent = Math.round((evt.loaded / evt.total) * 100);
+      progressBar.style.width = percent + '%';
+      progressText.textContent = percent + '% uploaded';
+    }
+  });
+
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      // try to parse response
+      try {
+        const resp = JSON.parse(xhr.responseText || '{}');
+        if (resp && resp.success) {
+          progressBar.style.width = '100%';
+          progressText.textContent = 'Upload complete';
+          linkBox.style.display = 'block';
+          // file.io returns "link" or "downloadLink" depending on version; handle both
+          const link = resp.link || resp.downloadLink || resp.result?.link || '';
+          linkBox.innerHTML = `<strong>Download Link:</strong><br>
+                               <a href="${link}" target="_blank" rel="noopener noreferrer">${link || '[link not returned]'}</a>
+                               <div class="small-note">The file will expire according to the host (1 week requested).</div>`;
+        } else {
+          const msg = resp.message || JSON.stringify(resp);
+          progressText.textContent = 'Upload failed: ' + msg;
+        }
+      } catch (err) {
+        progressText.textContent = 'Upload failed: invalid server response';
+      }
+    } else {
+      progressText.textContent = 'Upload failed with status ' + xhr.status;
+    }
+  };
+
+  xhr.onerror = function() {
+    progressText.textContent = 'A network error occurred during upload. Please check your connection and try again.';
+  };
+
+  xhr.ontimeout = function() {
+    progressText.textContent = 'Upload timed out. Try again with a smaller file or a faster connection.';
+  };
+
+  // optional timeout (milliseconds) - large videos may need more time, so avoid forcing small timeout
+  xhr.timeout = 0; // 0 = no timeout
+
+  try {
+    xhr.send(formData);
+  } catch (err) {
+    progressText.textContent = 'Upload failed: ' + err.message;
+  }
+});
+</script>
+</body>
+</html>

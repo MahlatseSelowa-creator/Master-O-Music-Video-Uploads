@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download Video Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(270deg, #0078d4, #005fa3, #00c6fb, #005fa3, #0078d4);
+            background-size: 1000% 1000%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+        .container {
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 40px;
+            margin-top: 60px;
+            width: 100%;
+            max-width: 420px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 28px;
+            color: #005fa3;
+        }
+        .video-list {
+            list-style: none;
+            padding: 0;
+        }
+        .video-list li {
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .download-btn {
+            background: #0078d4;
+            color: #fff;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .download-btn:hover {
+            background: #005fa3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Download Video Files</h1>
+        <ul class="video-list">
+            <li>
+                <span>Master O Animation Intro</span>
+                <a class="download-btn" href="MASTER O ANIMATIONS.avi" download>Download</a>
+            </li>
+            <li>
+                <span>Ke Boile Gae</span>
+                <a class="download-btn" href="KE BOILE GAE.mp4" download>Download</a>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>
